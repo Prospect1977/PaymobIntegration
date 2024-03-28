@@ -1,0 +1,80 @@
+﻿@model WebProject.Data.Product
+
+
+<h4 dir="rtl">جديد</h4>
+
+
+<hr />
+<div class="row" dir="rtl">
+    <div class="col-md-4">
+        <form asp-action="Create">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="form-group">
+                <label asp-for="ProductName" class="control-label"></label>
+                <input asp-for="ProductName" class="form-control" />
+                <span asp-validation-for="ProductName" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Description" class="control-label"></label>
+                <textarea rows="3" asp-for="Description" class="form-control" ></textarea>
+                <span asp-validation-for="Description" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Price" class="control-label"></label>
+                <input asp-for="Price" class="form-control" />
+                <span asp-validation-for="Price" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="PhotoUrl" class="control-label"></label>
+                <input type="file" id="InputPhoto" accept="image/*" class="form-control" />
+                <input type="hidden" asp-for="PhotoUrl" />
+
+                <img id="imgPreview" style="display:none;width:100%" />
+            </div>
+            <br />
+            <div class="form-group">
+                <input type="submit" value="CreateProduct" class="btn btn-primary" />
+            </div>
+        </form>
+    </div>
+</div>
+
+<div dir="rtl">
+   
+    <a asp-action="ProductsManager">عودة إلى القائمة</a>
+</div>
+
+@section Scripts {
+    
+        
+        <script type="text/javascript">
+            $("#InputPhoto").change(function () {
+                var files = $('#InputPhoto')[0].files;
+                console.log(files[0]);
+                var formData = new FormData();
+                
+                formData.append(files[0].name, files[0]);
+                $.ajax({
+                    url: '../../Products/UploadProductImage',
+                    type: 'POST',
+                    data: formData,
+                    dataType: "json",
+                    contentType: false,
+                    processData: false,
+                    complete: function (result) {
+
+                        $("#PhotoUrl").val($.parseJSON(JSON.stringify(result)).responseText);
+
+
+                        $('#imgPreview').attr("src", `../../images/products/${$.parseJSON(JSON.stringify(result)).responseText}`).show();
+
+                    }, error: function (ex) {
+                       
+                    }
+
+                });
+            });
+        </script>
+    
+}

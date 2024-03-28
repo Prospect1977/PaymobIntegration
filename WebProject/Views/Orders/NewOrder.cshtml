@@ -1,0 +1,51 @@
+﻿@model WebProject.Data.Product
+
+@{
+    ViewData["Title"] = "شراء";
+}
+<div class="row" dir="rtl">
+    <div class="col-12 col-md-5">
+        <input type="hidden" value="@Model.Id" id="hiddenProductId" />
+        <img width="100%" src="~/images/products/@Model.PhotoUrl" />
+        <br />
+        <h4>@Model.ProductName @String.Format("{0:#,##0.00}", Model.Price) ج.م</h4>
+        <span style="font-size:16px;font-style:italic;color:#767676">@Model.Description</span>
+        <hr />
+        <div class="form-group">
+            <label for="txtFullName" class="control-label">الأسم بالكامل</label>
+            <input id="txtFullName" class="form-control" />
+
+        </div>
+        <div class="form-group">
+            <label for="txtPhoneNumber" class="control-label">الهاتف</label>
+            <input id="txtPhoneNumber" class="form-control" />
+
+        </div>
+        <div class="form-group">
+            <label for="txtAddress" class="control-label">عنوان الشحن</label>
+            <textarea rows="3" id="txtAddress" class="form-control"></textarea>
+
+        </div>
+        <hr />
+        <span>الكمية المطلوبة</span>&nbsp;<input type="number" value="1" min="1" id="txtQuantity" style="width:50px;border:1px solid darkgray;outline:none" />
+        <br />
+        <span>الإجمالي: </span><span id="spanTotal"></span>
+        <hr />
+        <input type="hidden" id="hiddenPrice" value="@Model.Price" />
+        <input type="button" id="btnSubmit" value="شراء" class="btn btn-md btn-success" />
+    </div>
+</div>
+@section Scripts {
+
+
+    <script type="text/javascript">
+        var payment = $("#hiddenPrice").val();
+        $("#spanTotal").text(payment);
+        $("#txtQuantity").change(function () {
+            payment = parseFloat($("#hiddenPrice").val() * $("#txtQuantity").val()).toFixed(2);
+            $("#spanTotal").text(payment);
+        });
+       
+    </script>
+
+}

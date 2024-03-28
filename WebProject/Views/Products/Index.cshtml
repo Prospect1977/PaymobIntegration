@@ -1,0 +1,20 @@
+﻿@model IEnumerable<WebProject.Data.Product>
+
+@{
+    ViewData["Title"] = "Index";
+}
+<div class="row" dir="rtl">
+    @foreach (var item in Model)
+    {
+        <div class="col-12 col-md-3" style="margin-bottom:15px">
+            <div class="card">
+                <img class="card-img-top" src="~/images/products/@item.PhotoUrl" style="height: 300px;width: 100%;object-fit: cover;">
+                <div class="card-body">
+                    <h3>@item.ProductName <span style="font-size:16px">@String.Format("{0:#,##0.00}", item.Price) ج.م</span></h3>
+                    <p class="card-text" style="text-overflow: ellipsis;overflow: hidden;white-space: nowrap;margin-bottom:5px">@item.Description</p>
+                    <a href="~/Orders/NewOrder/@item.Id" class="btn btn-sm btn-primary">شراء</a>
+                </div>
+            </div>
+        </div>
+    }
+</div>

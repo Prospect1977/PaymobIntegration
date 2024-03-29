@@ -45,7 +45,15 @@
             payment = parseFloat($("#hiddenPrice").val() * $("#txtQuantity").val()).toFixed(2);
             $("#spanTotal").text(payment);
         });
-       
+        $("#btnSubmit").click(function () {
+            PleaseWait("show");
+
+            $.post("../../Orders/NewOrder", { ProductId: $("#hiddenProductId").val(), FullName: $("#txtFullName").val(), Quantity: parseInt($("#txtQuantity").val()), PhoneNumber: $("#txtPhoneNumber").val(), Address: $("#txtAddress").val(), Payment: payment }, function (secondToken) {
+                PleaseWait("hide");
+                 window.location.href = `https://accept.paymob.com/api/acceptance/iframes/760844?payment_token=${secondToken}`;
+
+            });
+        });
     </script>
 
 }

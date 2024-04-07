@@ -20,6 +20,8 @@ namespace WebProject.Controllers
         private int orderId;
         private int userOrderId;
         private double payment;
+        private string paymentMethod;
+        private int transactionId;
         public OrdersController(ApplicationDbContext db)
         {
             this.db = db;
@@ -33,7 +35,9 @@ namespace WebProject.Controllers
         }
         [Authorize]
         [HttpPost]
-        public async Task<IActionResult> NewOrder(int ProductId, int Quantity, string FullName, string PhoneNumber, string Address, double Payment)
+        [Authorize]
+        [HttpPost]
+        public async Task<IActionResult> NewOrder(string PaymentMethod, int ProductId, int Quantity, string FullName, string PhoneNumber, string Address, double Payment)
         {
             fullName = FullName;
             phoneNumber = PhoneNumber;
@@ -41,7 +45,8 @@ namespace WebProject.Controllers
             email = User.Identity.Name;
             payment = Payment * 100;
             userId = db.Users.FirstOrDefault(m => m.Email == email).Id;
-            var myOrder = new UserOrder
+            paymentMethod = PaymentMethod;
+            var myOrder = new WebProject.Data.UserOrder
             {
                 UserId = userId,
                 ProductId = ProductId,
@@ -49,13 +54,24 @@ namespace WebProject.Controllers
                 Quantity = Quantity,
                 Payment = Payment,
                 NetPayment = 0,
-                DataDate = DateTime.Now
+                DataDate = DateTime.Now,
+                Source = paymentMethod,
             };
             db.UserOrders.Add(myOrder);
             db.SaveChanges();
             userOrderId = myOrder.Id;
             await SubmitOrderStep1();
-            return Ok(secondToken);
+            if (paymentMethod == "iframe")
+            {
+                return Ok(secondToken);
+            }
+            else//kiosk
+            {
+                myOrder.TransactionId = transactionId;
+                db.SaveChanges();
+                return Ok(transactionId);
+            }
+
         }
         public async Task<IActionResult> SubmitOrderStep1()
         {
@@ -96,13 +112,31 @@ namespace WebProject.Controllers
         {
             var client = new HttpClient();
             var request = new HttpRequestMessage(HttpMethod.Post, "https://accept.paymob.com/api/acceptance/payment_keys");
-            var content = new StringContent("{\r\n\"auth_token\":\"" + firstToken + "\" ,\r\n\"amount_cents\":\"" + payment + "\",\r\n\"expiration\": 3600,\r\n\"order_id\":\"" + orderId + "\" ,\n\"billing_data\": {\r\n\"apartment\": \"NA\",\r\n\"email\":\"" + email + "\" ,\r\n\"floor\": \"NA\",\r\n\"first_name\":\"" + fullName.Split(" ")[0] + "\",\r\n\"street\": \"NA\",\r\n\"building\": \"NA\",\r\n\"phone_number\":\"" + phoneNumber + "\",\r\n\"shipping_method\": \"NA\",\r\n\"postal_code\": \"NA\",\r\n\"city\": \"NA\",\r\n\"country\": \"Egypt\",\r\n\"last_name\":\"" + fullName.Split(" ")[1] + "\" ,\r\n\"state\": \"NA\"\r\n},\r\n\"currency\": \"EGP\",\r\n\"integration_id\":\"" + ContantsWeb.IntegrationId + "\" , \n\"lock_order_when_paid\": \"false\",\r\n\"items\": []\r\n}\r\n\n", null, "application/json");
+            var IntegrationId = paymentMethod == "iframe" ? ContantsWeb.IntegrationId : ContantsWeb.KioskIntegrationId;
+            var content = new StringContent("{\r\n\"auth_token\":\"" + firstToken + "\" ,\r\n\"amount_cents\":\"" + payment + "\",\r\n\"expiration\": 3600,\r\n\"order_id\":\"" + orderId + "\" ,\n\"billing_data\": {\r\n\"apartment\": \"NA\",\r\n\"email\":\"" + email + "\" ,\r\n\"floor\": \"NA\",\r\n\"first_name\":\"" + fullName.Split(" ")[0] + "\",\r\n\"street\": \"NA\",\r\n\"building\": \"NA\",\r\n\"phone_number\":\"" + phoneNumber + "\",\r\n\"shipping_method\": \"NA\",\r\n\"postal_code\": \"NA\",\r\n\"city\": \"NA\",\r\n\"country\": \"Egypt\",\r\n\"last_name\":\"" + fullName.Split(" ")[1] + "\" ,\r\n\"state\": \"NA\"\r\n},\r\n\"currency\": \"EGP\",\r\n\"integration_id\":\"" + IntegrationId + "\" , \n\"lock_order_when_paid\": \"false\",\r\n\"items\": []\r\n}\r\n\n", null, "application/json");
             request.Content = content;
             var response = await client.SendAsync(request);
             response.EnsureSuccessStatusCode();
             var thirdResponse = await response.Content.ReadAsStringAsync();
             dynamic obj = JsonConvert.DeserializeObject<dynamic>(thirdResponse);
             secondToken = obj.token;
+            if (paymentMethod == "kiosk")
+            {
+                await SubmitOrderStep4();
+            }
+            return Ok();
+        }
+        public async Task<IActionResult> SubmitOrderStep4()//kiosk
+        {
+            var client = new HttpClient();
+            var request = new HttpRequestMessage(HttpMethod.Post, "https://accept.paymob.com/api/acceptance/payments/pay");
+            var content = new StringContent("{\r\n\"source\": {\"identifier\": \"AGGREGATOR\", \"subtype\": \"AGGREGATOR\"},\r\n\"payment_token\": \"" + secondToken + "\"\r\n}", null, "application/json"); request.Content = content;
+            var response = await client.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+            var fourthResponse = await response.Content.ReadAsStringAsync();
+            dynamic obj = JsonConvert.DeserializeObject<dynamic>(fourthResponse);
+            transactionId = obj.data.bill_reference;
+
             return Ok();
         }
     }

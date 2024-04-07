@@ -32,28 +32,112 @@
         <span>الإجمالي: </span><span id="spanTotal"></span>
         <hr />
         <input type="hidden" id="hiddenPrice" value="@Model.Price" />
-        <input type="button" id="btnSubmit" value="شراء" class="btn btn-md btn-success" />
+        <input type="button" value="شراء" style="cursor:pointer" class="btn btn-md btn-success" data-bs-toggle="modal" data-bs-target="#ModalSelectPaymentMethod" />
     </div>
 </div>
+
+
+
+
+<div class="modal" id="ModalSelectPaymentMethod" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">إختر طريقة الدفع</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" dir="rtl">
+                <div id="divSelectPaymentMethod">
+                    <div id="divCreditCard" style="border:1px solid lightgray;border-radius:5px;cursor:pointer;height:85px;">
+                        <img src="~/images/credit_cards.png" style="width:75px;margin:5px" />
+                        <span class="spanPaymentMethod fw-bold" style="line-height:65px;font-size:18px;">الدفع بالبطاقة البنكية</span>
+                    </div>
+                    <br />
+                    <div id="divKiosk" style="border:1px solid lightgray;border-radius:5px;cursor:pointer;height:85px;">
+                        <img src="~/images/Store_BW.png" style="width:75px;margin:5px" />
+                        <span class="spanPaymentMethod" style="line-height:65px;font-size:18px;">الدفع في المتجر</span>
+                    </div>
+                </div>
+                <div id="divPleaseWait" style="display:none;text-align:center;">
+                    <div style="margin:75px">
+                        <img src="~/images/PleaseWait_Gray.gif" style="margin:5px" />برجاء الإنتظار
+                    </div>
+
+                </div>
+                <div id="divKioskRefNumber" style="text-align: center;display:none">
+                    <img src="/images/AmanMasaryMomken.png">
+                    <br>
+                    <span style="direction:rtl;font-size: 18px;"> إذهب بالكود التالي إلى المتجر واخبرهم بأنك ترغب في الدفع عن طريق: امان أو مصاري أو ممكن، وسوف يتم بدأ إجراءات الشحن بعدها مباشرة</span>
+                    <br>
+                    <h2 id="spanRefNumber" style="background-color: #4c4c4c;color: white;padding: 5px;border-radius: 5px;margin-top: 7px;">
+                        0000000
+                    </h2>
+                </div>
+            </div>
+            <div class="modal-footer">
+
+                <button type="button" id="btnSubmit" class="btn btn-primary">موافق</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 @section Scripts {
 
 
     <script type="text/javascript">
         var payment = $("#hiddenPrice").val();
+        var paymentMethod = "iframe";
         $("#spanTotal").text(payment);
         $("#txtQuantity").change(function () {
             payment = parseFloat($("#hiddenPrice").val() * $("#txtQuantity").val()).toFixed(2);
             $("#spanTotal").text(payment);
         });
-        $("#btnSubmit").click(function () {
-            PleaseWait("show");
 
-            $.post("../../Orders/NewOrder", { ProductId: $("#hiddenProductId").val(), FullName: $("#txtFullName").val(), Quantity: parseInt($("#txtQuantity").val()), PhoneNumber: $("#txtPhoneNumber").val(), Address: $("#txtAddress").val(), Payment: payment }, function (secondToken) {
-                PleaseWait("hide");
-                 window.location.href = `https://accept.paymob.com/api/acceptance/iframes/760844?payment_token=${secondToken}`;
+        $("#divCreditCard").click(function () {
+            $("#divCreditCard").find(".spanPaymentMethod").addClass("fw-bold");
+            $("#divCreditCard").find("img").attr("src", "../../images/credit_cards.png");
+            $("#divKiosk").find(".spanPaymentMethod").removeClass("fw-bold")
+            $("#divKiosk").find("img").attr("src", "../../images/Store_BW.png");
+            paymentMethod = "iframe";
+        });
+        $("#divKiosk").click(function () {
+            $("#divCreditCard").find(".spanPaymentMethod").removeClass("fw-bold");
+            $("#divCreditCard").find("img").attr("src", "../../images/credit_cards_BW.png");
+            $("#divKiosk").find(".spanPaymentMethod").addClass("fw-bold")
+            $("#divKiosk").find("img").attr("src", "../../images/Store.png");
+            paymentMethod = "kiosk";
+        });
+        $("#btnSubmit").click(function () {
+            if (paymentMethod == "iframe") {
+                $(".btn-close").click();
+                PleaseWait("show");
+            } else {
+                $("#divSelectPaymentMethod").hide();
+                $("#divPleaseWait").show();
+                // $("#divKioskRefNumber").show();
+
+                // return false;
+            }
+
+
+            $.post("../../Orders/NewOrder", { PaymentMethod: paymentMethod, ProductId: $("#hiddenProductId").val(), FullName: $("#txtFullName").val(), Quantity: parseInt($("#txtQuantity").val()), PhoneNumber: $("#txtPhoneNumber").val(), Address: $("#txtAddress").val(), Payment: payment }, function (response) {
+                if (paymentMethod == "iframe") {
+                    PleaseWait("hide");
+                    window.location.href = `https://accept.paymob.com/api/acceptance/iframes/760844?payment_token=${response}`;//response here is actually the second token
+                } else {
+                    $("#divPleaseWait").hide();
+                    $("#spanRefNumber").text(response); //response here is actually the TransactionNumber of paymob
+                    $("#divKioskRefNumber").show();
+                    $("#btnSubmit").hide();
+                }
 
             });
+
+
         });
+
     </script>
 
 }
